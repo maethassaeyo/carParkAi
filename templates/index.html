@@ -10,19 +10,77 @@
 
     <h2>จำนวนรถที่ตรวจพบ: <span id="numcar">0</span></h2>
     <h2>เหลือที่จอด :<span id="ava">6</span></h2>
+    <h2>P1 :<span id="p1">0</span></h2>
+    <h2>P2 :<span id="p2">ว่าง</span></h2>
+    <h2>P3 :<span id="p3">ว่าง</span></h2>
+    <h2>P4 :<span id="p4">ว่าง</span></h2>
+    <h2>P5 :<span id="p5">ว่าง</span></h2>
+
+
+
+
+
+
 
     <script>
-        async function updateNumcar() {
+        async function update() {
             try {
                 const res = await fetch("/numcar");
                 const data = await res.json();
                 document.getElementById("numcar").textContent = data.numcar;
-                document.getElementById("ava").textContent = 6 - data.numcar;
+                document.getElementById("ava").textContent = 5 - data.numcar;
+
+
+                if(data.P1 == 1){
+                    document.getElementById("p1").textContent = "ไม่ว่าง";
+
+                }else if (data.P1 == 0){
+                    document.getElementById("p1").textContent = "ว่าง";
+                }
+
+
+                if(data.P2 == 1){
+                    document.getElementById("p2").textContent = "ไม่ว่าง";
+
+                }else if (data.P2 == 0){
+                    document.getElementById("p2").textContent = "ว่าง";
+                }
+
+
+                if(data.P3 == 1){
+                    document.getElementById("p3").textContent = "ไม่ว่าง";
+
+                }else if (data.P3 == 0){
+                    document.getElementById("p3").textContent = "ว่าง";
+                }
+
+                if(data.P4 == 1){
+                    document.getElementById("p4").textContent = "ไม่ว่าง";
+
+                }else if (data.P4 == 0){
+                    document.getElementById("p4").textContent = "ว่าง";
+                }
+
+
+                if(data.P5 == 1){
+                    document.getElementById("p5").textContent = "ไม่ว่าง";
+
+                }else if (data.P5 == 0){
+                    document.getElementById("p5").textContent = "ว่าง";
+                }
+
+
+
+
+
             } catch (err) {
                 console.error(err);
             }
         }
-        setInterval(updateNumcar, 1500);
+
+
+     
+        setInterval(update, 500);
     </script>
 </body>
 </html>
