@@ -24,6 +24,7 @@ net = cv2.dnn.readNetFromCaffe(
 IP = "192.168.0.107"
 URL = 'rtsp://admin:URGHJA@'+IP+':554/h264_stream'
 URL = './vdo/4.mp4'
+
 numcar = 0
 
 def write(message,level='INFO'):
@@ -91,18 +92,16 @@ def gen_frames():
                     (startX, startY, endX, endY) = box.astype("int")
 
                   
-                    label = "{} [{:.2f}%]".format(
-                        CLASSES[class_index], percent * 100)
+                    label = "{} [{:.2f}%]".format(CLASSES[class_index], percent * 100)
                     numcar+=1 if CLASSES[class_index] == "CAR" else numcar
                     cv2.rectangle(frame, (startX, startY),
                                 (endX, endY), COLORS[class_index], 2)
-                    cv2.rectangle(frame, (startX - 1, startY - 30),
-                                (endX + 1, startY), COLORS[class_index], cv2.FILLED)
+                    cv2.rectangle(frame, (startX - 1, startY - 30),(endX + 1, startY), COLORS[class_index], cv2.FILLED)
                     y = startY - 15 if startY - 15 > 15 else startY + 15
                     cv2.putText(frame, label, (startX + 20, y + 5),cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
                     Xc = startX + ((endX-startX)//2)
                     Yc = startY - ((startY-endY)//2)
-                    cv2.circle(frame, (Xc, Yc), 1, (0, 0, 255), 10)
+                    cv2.circle(frame, (Xc, Yc), 2, (0, 0, 255), 10)
                     ParkLo = [[0,400],[401,800],[801,1200],[1201,1600],[1601,2000]]
                     for i in range(5):
                         lo = range(ParkLo[i][0],ParkLo[i][1])

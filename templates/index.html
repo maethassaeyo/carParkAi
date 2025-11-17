@@ -1,86 +1,269 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-    <meta charset="utf-8">
-    <title>🚗 Parking Monitor</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Car Park Dashboard</title>
+    <!-- 1. โหลด Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 2. ตั้งค่า Font และพื้นหลัง */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Dark Gray-900 */
+            color: #F9FAFB; /* Gray-100 */
+        }
+        /* 3. สไตล์สำหรับ Placeholder วิดีโอ */
+        #stream-placeholder {
+            display: none; /* ซ่อนไว้ก่อน */
+            aspect-ratio: 16 / 9;
+        }
+        
+        /* 4. สไตล์สำหรับสถานะช่องจอด */
+        .status-available {
+            color: #4ade80; /* green-400 */
+        }
+        .status-occupied {
+            color: #f87171; /* red-400 */
+        }
+        .status-pending {
+            color: #fde047; /* yellow-300 */
+        }
+    </style>
 </head>
-<body style="text-align:center; background:#111; color:white;">
-    <h1>🚘 Parking Monitor</h1>
-    <img src="{{ url_for('video') }}" width="1000" />
+<body class="antialiased">
 
-    <h2>จำนวนรถที่ตรวจพบ: <span id="numcar">0</span></h2>
-    <h2>เหลือที่จอด :<span id="ava">6</span></h2>
-    <h2>P1 :<span id="p1">0</span></h2>
-    <h2>P2 :<span id="p2">ว่าง</span></h2>
-    <h2>P3 :<span id="p3">ว่าง</span></h2>
-    <h2>P4 :<span id="p4">ว่าง</span></h2>
-    <h2>P5 :<span id="p5">ว่าง</span></h2>
+    <!--
+        คำแนะนำสำหรับการเชื่อมต่อ PYTHON FLASK (aiPark2.py) กับ DASHBOARD นี้
+        
+        Dashboard นี้ถูกตั้งค่าให้ดึงข้อมูลจาก 2 Routes:
+
+        1.  /video_feed (สำหรับสตรีมวิดีโอ)
+            -   ส่งภาพ (mimetype='multipart/x-mixed-replace; boundary=frame')
+        
+        2.  /numcar (สำหรับข้อมูล JSON)
+            -   ส่ง JSON ที่มีหน้าตาแบบนี้:
+                {
+                    "P4": 0,
+                    "P5": 0
+                }
+        
+        *** ข้อสำคัญ (อัปเดต): ***
+        เบราว์เซอร์ของคุณไม่สามารถเชื่อมต่อกับ "/numcar" ได้โดยตรง
+        โค้ดนี้จึงถูกอัปเดตให้ชี้ไปที่ "http://localhost:5000" ซึ่งเป็นที่อยู่มาตรฐานของ Flask
+        
+        **คุณต้องแน่ใจว่าได้รันเซิร์ฟเวอร์ Python (aiPark2.py) ของคุณก่อน**
+        **และเซิร์ฟเวอร์นั้นต้องทำงานที่ http://localhost:5000**
+        (หากคุณรัน Python ที่พอร์ตอื่น เช่น 8080 ให้เปลี่ยน URL ด้านล่างให้ตรงกัน)
+    -->
+
+    <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Header -->
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-white">
+                AI Car Park Dashboard
+            </h1>
+            <p class="text-lg text-gray-400">แสดงผลการตรวจจับรถยนต์แบบเรียลไทม์</p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- 1. Live Stream Column (คอลัมน์ซ้าย) -->
+            <div class="lg:col-span-2 bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6">
+                <h2 class="text-xl font-semibold text-white mb-4">Live Stream</h2>
+                <div class="aspect-w-16 aspect-h-9 bg-gray-900 rounded-lg overflow-hidden">
+                    <img id="video-stream"
+                         src="{{ url_for('video') }}"
+                         alt="Live video feed from car park"
+                         class="w-full h-full object-cover"
+                         onerror="handleStreamError()">
+
+                    <!-- นี่คือส่วนที่จะแสดง ถ้าสตรีมวิดีโอล่มหรือไม่เริ่ม -->
+                    <div id="stream-placeholder" class="w-full h-full flex items-center justify-center bg-gray-700 text-gray-400">
+                        <div class="text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M4 8a2 2 0 012-2h5a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V8z" />
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium text-white">ไม่พบสตรีมวิดีโอ</h3>
+                            <p class="mt-1 text-sm text-gray-500">กำลังรอการเชื่อมต่อจาก Backend...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Status Column (คอลัมน์ขวา) -->
+            <div class="lg:col-span-1 space-y-6">
+                <h2 class="text-xl font-semibold text-white">Parking Status</h2>
+
+                <!-- UPDATED SECTION: Real-time Spot Status (P1-P5) -->
+                <div class="bg-gray-800 rounded-xl shadow-lg p-5">
+                    <h3 class="text-lg font-semibold text-white mb-3">สถานะช่องจอด (P1 - P5)</h3>
+                    <div class="space-y-3">
+                        <!-- Spot 1 -->
+                        <div class="flex justify-between items-center bg-gray-700 p-3 rounded-lg">
+                            <span class="font-bold text-lg text-white">Parking P1</span>
+                            <span id="p1" class="font-semibold text-lg status-pending">...</span>
+                        </div>
+                        <!-- Spot 2 -->
+                        <div class="flex justify-between items-center bg-gray-700 p-3 rounded-lg">
+                            <span class="font-bold text-lg text-white">Parking P2</span>
+                            <span id="p2" class="font-semibold text-lg status-pending">...</span>
+                        </div>
+                        <!-- Spot 3 -->
+                        <div class="flex justify-between items-center bg-gray-700 p-3 rounded-lg">
+                            <span class="font-bold text-lg text-white">Parking P3</span>
+                            <span id="p3" class="font-semibold text-lg status-pending">...</span>
+                        </div>
+                        <!-- Spot 4 -->
+                        <div class="flex justify-between items-center bg-gray-700 p-3 rounded-lg">
+                            <span class="font-bold text-lg text-white">Parking P4</span>
+                            <span id="p4" class="font-semibold text-lg status-pending">...</span>
+                        </div>
+                        <!-- Spot 5 -->
+                        <div class="flex justify-between items-center bg-gray-700 p-3 rounded-lg">
+                            <span class="font-bold text-lg text-white">Parking P5</span>
+                            <span id="p5" class="font-semibold text-lg status-pending">...</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- END UPDATED SECTION -->
 
 
+                <!-- Stat Card: Total Cars -->
+                <div class="bg-gray-800 rounded-xl shadow-lg p-5 flex items-center space-x-4">
+                    <div class="flex-shrink-0 bg-blue-600 p-3 rounded-lg">
+                        <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2.5-1.5L8 17l2.5-1.5L13 16zM19 16V6a1 1 0 00-1-1H9.5" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-400">Total Cars Detected (Max 5)</p>
+                        <!-- ID อัปเดตเป็น "numcar" -->
+                        <p id="numcar" class="text-3xl font-bold text-white">0</p>
+                    </div>
+                </div>
 
+                <!-- Stat Card: Available -->
+                <div class="bg-gray-800 rounded-xl shadow-lg p-5 flex items-center space-x-4">
+                    <div class="flex-shrink-0 bg-green-600 p-3 rounded-lg">
+                        <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-400">Spots Available</p>
+                        <!-- ID อัปเดตเป็น "ava" -->
+                        <p id="ava" class="text-3xl font-bold text-green-400">0</p>
+                    </div>
+                </div>
 
+            </div>
 
+        </div>
 
+        <!-- Footer for Last Update Time -->
+        <footer class="mt-6 text-center text-sm text-gray-500">
+            <p>Last updated: <span id="last-updated">N/A</span></p>
+        </footer>
+
+    </div>
 
     <script>
+        // --- ส่วนควบคุม JavaScript ---
+        
+        // 1. อ้างอิง Element
+        const lastUpdatedEl = document.getElementById('last-updated');
+        const videoStreamEl = document.getElementById('video-stream');
+        const streamPlaceholderEl = document.getElementById('stream-placeholder');
+
+        // 2. ฟังก์ชันสำหรับจัดการเมื่อสตรีมวิดีโอล่ม
+        function handleStreamError() {
+            console.error("Video stream failed to load.");
+            if (videoStreamEl) videoStreamEl.style.display = 'none'; // ซ่อนรูปภาพที่พัง
+            if (streamPlaceholderEl) streamPlaceholderEl.style.display = 'flex'; // แสดง Placeholder
+        }
+
+        // 3. ฟังก์ชันอัปเดตสถานะ (จากโค้ดของคุณ + เพิ่มสี)
         async function update() {
             try {
+                // อัปเดต: ใช้ URL เต็ม (Absolute URL) เพื่อเชื่อมต่อกับเซิร์ฟเวอร์ Flask
                 const res = await fetch("/numcar");
                 const data = await res.json();
+                
+                // อัปเดตการ์ดสรุป
                 document.getElementById("numcar").textContent = data.numcar;
                 document.getElementById("ava").textContent = 5 - data.numcar;
 
-
+                // อัปเดตสถานะ P1
+                const p1El = document.getElementById("p1");
                 if(data.P1 == 1){
-                    document.getElementById("p1").textContent = "ไม่ว่าง";
-
-                }else if (data.P1 == 0){
-                    document.getElementById("p1").textContent = "ว่าง";
+                    p1El.textContent = "ไม่ว่าง";
+                    p1El.className = "font-semibold text-lg status-occupied";
+                } else if (data.P1 == 0){
+                    p1El.textContent = "ว่าง";
+                    p1El.className = "font-semibold text-lg status-available";
                 }
 
-
+                // อัปเดตสถานะ P2
+                const p2El = document.getElementById("p2");
                 if(data.P2 == 1){
-                    document.getElementById("p2").textContent = "ไม่ว่าง";
-
-                }else if (data.P2 == 0){
-                    document.getElementById("p2").textContent = "ว่าง";
+                    p2El.textContent = "ไม่ว่าง";
+                    p2El.className = "font-semibold text-lg status-occupied";
+                } else if (data.P2 == 0){
+                    p2El.textContent = "ว่าง";
+                    p2El.className = "font-semibold text-lg status-available";
                 }
 
-
+                // อัปเดตสถานะ P3
+                const p3El = document.getElementById("p3");
                 if(data.P3 == 1){
-                    document.getElementById("p3").textContent = "ไม่ว่าง";
-
-                }else if (data.P3 == 0){
-                    document.getElementById("p3").textContent = "ว่าง";
+                    p3El.textContent = "ไม่ว่าง";
+                    p3El.className = "font-semibold text-lg status-occupied";
+                } else if (data.P3 == 0){
+                    p3El.textContent = "ว่าง";
+                    p3El.className = "font-semibold text-lg status-available";
                 }
 
+                // อัปเดตสถานะ P4
+                const p4El = document.getElementById("p4");
                 if(data.P4 == 1){
-                    document.getElementById("p4").textContent = "ไม่ว่าง";
-
-                }else if (data.P4 == 0){
-                    document.getElementById("p4").textContent = "ว่าง";
+                    p4El.textContent = "ไม่ว่าง";
+                    p4El.className = "font-semibold text-lg status-occupied";
+                } else if (data.P4 == 0){
+                    p4El.textContent = "ว่าง";
+                    p4El.className = "font-semibold text-lg status-available";
                 }
 
-
+                // อัปเดตสถานะ P5
+                const p5El = document.getElementById("p5");
                 if(data.P5 == 1){
-                    document.getElementById("p5").textContent = "ไม่ว่าง";
-
-                }else if (data.P5 == 0){
-                    document.getElementById("p5").textContent = "ว่าง";
+                    p5El.textContent = "ไม่ว่าง";
+                    p5El.className = "font-semibold text-lg status-occupied";
+                } else if (data.P5 == 0){
+                    p5El.textContent = "ว่าง";
+                    p5El.className = "font-semibold text-lg status-available";
                 }
-
-
-
-
+                
+                // อัปเดตเวลา
+                lastUpdatedEl.textContent = new Date().toLocaleString('th-TH');
 
             } catch (err) {
                 console.error(err);
+                lastUpdatedEl.textContent = "Failed to connect to backend.";
+                // อาจจะเรียก handleStreamError() ที่นี่ด้วยก็ได้
             }
         }
 
+        // 4. เริ่มการอัปเดต
+        setInterval(update, 1500); // อัปเดตทุก 0.5 วินาที
+        
+        // 5. เรียกใช้ครั้งแรกเมื่อโหลดหน้า
+        document.addEventListener('DOMContentLoaded', update);
 
-     
-        setInterval(update, 500);
     </script>
+
 </body>
 </html>
