@@ -21,9 +21,8 @@ net = cv2.dnn.readNetFromCaffe(
     "./MobileNetSSD/MobileNetSSD.caffemodel"
 )
 # เลือกวิดีโอ/เปิดกล้อง
-IP = "10.190.25.158"
-URL = 'rtsp://admin:URGHJA@'+IP+':554/h264_stream'
-#URL = './vdo/4.mp4'
+
+URL = '' #ีีี url ของกล้อง
 
 numcar = 0
 
